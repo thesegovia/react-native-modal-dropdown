@@ -15,7 +15,6 @@ import {
   Text,
   ListView,
   TouchableWithoutFeedback,
-  TouchableNativeFeedback,
   TouchableOpacity,
   TouchableHighlight,
   Modal,
@@ -166,25 +165,21 @@ export default class ModalDropdown extends Component {
     const {disabled, accessible, children, textStyle} = this.props;
     const {buttonText} = this.state;
 
-    return (
-      <TouchableOpacity ref={button => this._button = button}
-                        disabled={disabled}
-                        accessible={accessible}
-                        onPress={this._onButtonPress}
-      >
-        {
-          children ||
-          (
-            <View style={styles.button}>
-              <Text style={[styles.buttonText, textStyle]}
-                    numberOfLines={1}
-              >
-                {buttonText}
-              </Text>
-            </View>
-          )
-        }
-      </TouchableOpacity>
+    return this._renderTouchableChild(
+      children || (
+        <View style={styles.button}>
+          <Text style={[styles.buttonText, textStyle]} numberOfLines={1}>
+            {buttonText}
+          </Text>
+        </View>
+      ),
+      {
+        ref: button => { this._button = button },
+        disabled,
+        accessible,
+        onPress: this._onButtonPress
+      },
+      TouchableOpacity
     );
   }
 
@@ -303,6 +298,14 @@ export default class ModalDropdown extends Component {
     return ds.cloneWithRows(options);
   }
 
+  _renderTouchableChild(child, preservedProps, DefaultTouchable) {
+    if (TOUCHABLE_ELEMENTS.find(name => name === child.type.displayName)) {
+      return React.cloneElement(child, preservedProps);
+    } else {
+      return React.createElement(DefaultTouchable, preservedProps, child)
+    }
+  }
+
   _renderRow = (rowData, sectionID, rowID, highlightRow) => {
     const {renderRow, dropdownTextStyle, dropdownTextHighlightStyle, accessible} = this.props;
     const {selectedIndex} = this.state;
@@ -319,53 +322,15 @@ export default class ModalDropdown extends Component {
         {rowData}
       </Text>) :
       renderRow(rowData, rowID, highlighted);
-    const preservedProps = {
-      key,
-      accessible,
-      onPress: () => this._onRowPress(rowData, sectionID, rowID, highlightRow),
-    };
-    if (TOUCHABLE_ELEMENTS.find(name => name == row.type.displayName)) {
-      const props = {...row.props};
-      props.key = preservedProps.key;
-      props.onPress = preservedProps.onPress;
-      const {children} = row.props;
-      switch (row.type.displayName) {
-        case 'TouchableHighlight': {
-          return (
-            <TouchableHighlight {...props}>
-              {children}
-            </TouchableHighlight>
-          );
-        }
-        case 'TouchableOpacity': {
-          return (
-            <TouchableOpacity {...props}>
-              {children}
-            </TouchableOpacity>
-          );
-        }
-        case 'TouchableWithoutFeedback': {
-          return (
-            <TouchableWithoutFeedback {...props}>
-              {children}
-            </TouchableWithoutFeedback>
-          );
-        }
-        case 'TouchableNativeFeedback': {
-          return (
-            <TouchableNativeFeedback {...props}>
-              {children}
-            </TouchableNativeFeedback>
-          );
-        }
-        default:
-          break;
-      }
-    }
-    return (
-      <TouchableHighlight {...preservedProps}>
-        {row}
-      </TouchableHighlight>
+
+    return this._renderTouchableChild(
+      row,
+      {
+        key,
+        accessible,
+        onPress: () => this._onRowPress(rowData, sectionID, rowID, highlightRow),
+      },
+      TouchableHighlight
     );
   };
 
